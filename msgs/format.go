@@ -115,10 +115,10 @@ func (s *Service) NewEditMarkUpMessage(userID int64, msgID int, markUp *tgbotapi
 	return s.SendMsgToUser(msg)
 }
 
-func (s *Service) SendAnswerCallback(callbackQuery *tgbotapi.CallbackQuery, lang, text string) error {
+func (s *Service) SendAnswerCallback(callbackQuery *tgbotapi.CallbackQuery, text string) error {
 	answerCallback := tgbotapi.CallbackConfig{
 		CallbackQueryID: callbackQuery.ID,
-		Text:            s.Sender.LangText(lang, text),
+		Text:            text,
 	}
 
 	_ = s.SendMsgToUser(answerCallback)
