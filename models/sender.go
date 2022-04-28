@@ -12,7 +12,6 @@ type Sender interface {
 
 	AvailableLang() []string
 	GetCurrency() string
-	LangText(lang, key string) string
 	GetTexts(lang string) map[string]string
 
 	CheckAdmin(userID int64) bool
