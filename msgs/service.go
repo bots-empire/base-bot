@@ -7,3 +7,10 @@ type Service struct {
 
 	Developers []int64
 }
+
+func NewService(sender models.Sender, developers []int64) *Service {
+	return &Service{
+		Sender:     sender,
+		Developers: developers,
+	}
+}

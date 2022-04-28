@@ -14,3 +14,10 @@ type Service struct {
 
 	usersPerIteration int
 }
+
+func NewService(messages *msgs.Service, userPerIter int) *Service {
+	return &Service{
+		messages:          messages,
+		usersPerIteration: userPerIter,
+	}
+}
