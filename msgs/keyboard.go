@@ -200,6 +200,6 @@ func NewIlCustomButton(text, data string) InlineCustomButton {
 	}
 }
 
-func (b InlineCustomButton) build(_ string) tgbotapi.InlineKeyboardButton {
+func (b InlineCustomButton) build(_ func(textKey string) string) tgbotapi.InlineKeyboardButton {
 	return tgbotapi.NewInlineKeyboardButtonData(b.text, b.data)
 }
