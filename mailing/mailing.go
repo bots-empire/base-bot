@@ -19,7 +19,7 @@ type MailingUser struct {
 	AdvertChannel int
 }
 
-func (s *Service) StartMailing(botLang string, initiator *MailingUser, channel int) {
+func (s *Service) StartMailing(botLang string, initiatorID int64, channel int) {
 	startTime := time.Now()
 	s.fillMessageMap()
 
@@ -36,7 +36,7 @@ func (s *Service) StartMailing(botLang string, initiator *MailingUser, channel i
 	for offset := 0; ; offset += s.usersPerIteration {
 		countSend, errCount := s.mailToUserWithPagination(botLang, offset, channel)
 		if countSend == -1 {
-			s.sendRespMsgToMailingInitiator(initiator, "failing_mailing_text", sendToUsers)
+			s.sendRespMsgToMailingInitiator(initiatorID, "failing_mailing_text", sendToUsers)
 			break
 		}
 
@@ -53,16 +53,16 @@ func (s *Service) StartMailing(botLang string, initiator *MailingUser, channel i
 		false,
 	)
 
-	s.sendRespMsgToMailingInitiator(initiator, "complete_mailing_text", sendToUsers)
+	s.sendRespMsgToMailingInitiator(initiatorID, "complete_mailing_text", sendToUsers)
 
 	s.messages.Sender.UpdateBlockedUsers(channel)
 }
 
-func (s *Service) sendRespMsgToMailingInitiator(user *MailingUser, key string, countOfSends int) {
-	lang := s.messages.Sender.AdminLang(user.ID)
+func (s *Service) sendRespMsgToMailingInitiator(userID int64, key string, countOfSends int) {
+	lang := s.messages.Sender.AdminLang(userID)
 	text := fmt.Sprintf(s.messages.Sender.AdminText(lang, key), countOfSends)
 
-	_ = s.messages.NewParseMessage(user.ID, text)
+	_ = s.messages.NewParseMessage(userID, text)
 }
 
 func (s *Service) mailToUserWithPagination(botLang string, offset int, channel int) (int, int) {
