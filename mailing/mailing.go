@@ -137,45 +137,48 @@ func (s *Service) sendMailToUser(botLang string, user *MailingUser, respChan cha
 		channel = user.AdvertChannel
 	}
 
-	markUp := msgs.NewIlMarkUp(
-		msgs.NewIlRow(msgs.NewIlURLButton("advertisement_button_text", s.messages.Sender.GetAdvertURL(user.Language, channel))),
-	).Build(s.messages.Sender.GetTexts(user.Language))
-	button := &markUp
-
-	if !s.messages.Sender.ButtonUnderAdvert() {
-		button = nil
-	}
-
-	baseChat := tgbotapi.BaseChat{
-		ChatID:      user.ID,
-		ReplyMarkup: button,
-	}
+	//markUp := msgs.NewIlMarkUp(
+	//	msgs.NewIlRow(msgs.NewIlURLButton("advertisement_button_text", s.messages.Sender.GetAdvertURL(user.Language, channel))),
+	//).Build(s.messages.Sender.GetTexts(user.Language))
+	//button := &markUp
+	//
+	//if !s.messages.Sender.ButtonUnderAdvert() {
+	//	button = nil
+	//}
+	//
+	//baseChat := tgbotapi.BaseChat{
+	//	ChatID:      user.ID,
+	//	ReplyMarkup: button,
+	//}
 
 	switch s.messages.Sender.AdvertisingChoice(channel) {
 	case "photo":
 		msg := s.photoMessageConfig[botLang][channel]
-		msg.BaseChat = baseChat
+		msg.BaseChat.ChatID = user.ID
+		//msg.BaseChat = baseChat
 		respChan <- s.messages.SendMsgToUser(msg) == nil
 	case "video":
 		msg := s.videoMessageConfig[botLang][channel]
-		msg.BaseChat = baseChat
+		msg.BaseChat.ChatID = user.ID
+		//msg.BaseChat = baseChat
 		respChan <- s.messages.SendMsgToUser(msg) == nil
 	default:
 		msg := s.messageConfigs[botLang][channel]
-		msg.BaseChat = baseChat
+		msg.BaseChat.ChatID = user.ID
+		//msg.BaseChat = baseChat
 		respChan <- s.messages.SendMsgToUser(msg) == nil
 	}
 }
 
 func (s *Service) fillMessageMap() {
-	var markUp tgbotapi.InlineKeyboardMarkup
 	for _, lang := range s.messages.Sender.AvailableLang() {
 		for i := 1; i < 6; i++ {
+			var markUp tgbotapi.InlineKeyboardMarkup
 			text := s.messages.Sender.GetAdvertText(lang, i)
 
 			s.nilConfig(lang)
 
-			if s.messages.Sender.ButtonUnderAdvert() {
+			if !s.messages.Sender.ButtonUnderAdvert() {
 				markUp = tgbotapi.InlineKeyboardMarkup{}
 			} else {
 				markUp = msgs.NewIlMarkUp(
