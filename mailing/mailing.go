@@ -137,35 +137,35 @@ func (s *Service) sendMailToUser(botLang string, user *MailingUser, respChan cha
 		channel = user.AdvertChannel
 	}
 
-	//markUp := msgs.NewIlMarkUp(
-	//	msgs.NewIlRow(msgs.NewIlURLButton("advertisement_button_text", s.messages.Sender.GetAdvertURL(user.Language, channel))),
-	//).Build(s.messages.Sender.GetTexts(user.Language))
-	//button := &markUp
-	//
-	//if !s.messages.Sender.ButtonUnderAdvert() {
-	//	button = nil
-	//}
-	//
-	//baseChat := tgbotapi.BaseChat{
-	//	ChatID:      user.ID,
-	//	ReplyMarkup: button,
-	//}
+	markUp := msgs.NewIlMarkUp(
+		msgs.NewIlRow(msgs.NewIlURLButton("advertisement_button_text", s.messages.Sender.GetAdvertURL(botLang, channel))),
+	).Build(s.messages.Sender.GetTexts(user.Language))
+	button := &markUp
+
+	if !s.messages.Sender.ButtonUnderAdvert() {
+		button = nil
+	}
+
+	baseChat := tgbotapi.BaseChat{
+		ChatID:      user.ID,
+		ReplyMarkup: button,
+	}
 
 	switch s.messages.Sender.AdvertisingChoice(channel) {
 	case "photo":
 		msg := s.photoMessageConfig[channel]
-		msg.BaseChat.ChatID = user.ID
-		//msg.BaseChat = baseChat
+		//msg.BaseChat.ChatID = user.ID
+		msg.BaseChat = baseChat
 		respChan <- s.messages.SendMsgToUser(msg) == nil
 	case "video":
 		msg := s.videoMessageConfig[channel]
-		msg.BaseChat.ChatID = user.ID
-		//msg.BaseChat = baseChat
+		//msg.BaseChat.ChatID = user.ID
+		msg.BaseChat = baseChat
 		respChan <- s.messages.SendMsgToUser(msg) == nil
 	default:
 		msg := s.messageConfigs[channel]
-		msg.BaseChat.ChatID = user.ID
-		//msg.BaseChat = baseChat
+		//msg.BaseChat.ChatID = user.ID
+		msg.BaseChat = baseChat
 		respChan <- s.messages.SendMsgToUser(msg) == nil
 	}
 }
@@ -173,26 +173,26 @@ func (s *Service) sendMailToUser(botLang string, user *MailingUser, respChan cha
 func (s *Service) fillMessageMap() {
 	for _, lang := range s.messages.Sender.AvailableLang() {
 		for i := 1; i < 6; i++ {
-			var markUp tgbotapi.InlineKeyboardMarkup
+			//var markUp tgbotapi.InlineKeyboardMarkup
 			text := s.messages.Sender.GetAdvertText(lang, i)
 
 			s.nilConfig()
 
-			if !s.messages.Sender.ButtonUnderAdvert() {
-				markUp = tgbotapi.InlineKeyboardMarkup{}
-			} else {
-				markUp = msgs.NewIlMarkUp(
-					msgs.NewIlRow(msgs.NewIlURLButton("advertisement_button_text", s.messages.Sender.GetAdvertURL(lang, i))),
-				).Build(s.messages.Sender.GetTexts(lang))
-			}
+			//if !s.messages.Sender.ButtonUnderAdvert() {
+			//	markUp = tgbotapi.InlineKeyboardMarkup{}
+			//} else {
+			//	markUp = msgs.NewIlMarkUp(
+			//		msgs.NewIlRow(msgs.NewIlURLButton("advertisement_button_text", s.messages.Sender.GetAdvertURL(lang, i))),
+			//	).Build(s.messages.Sender.GetTexts(lang))
+			//}
 
 			switch s.messages.Sender.AdvertisingChoice(i) {
 			case "photo":
 				s.photoMessageConfig[i] = tgbotapi.PhotoConfig{
 					BaseFile: tgbotapi.BaseFile{
-						BaseChat: tgbotapi.BaseChat{
-							ReplyMarkup: markUp,
-						},
+						//BaseChat: tgbotapi.BaseChat{
+						//	ReplyMarkup: markUp,
+						//},
 						File: tgbotapi.FileID(s.messages.Sender.GetAdvertisingPhoto(lang, i)),
 					},
 					Caption:   text,
@@ -201,9 +201,9 @@ func (s *Service) fillMessageMap() {
 			case "video":
 				s.videoMessageConfig[i] = tgbotapi.VideoConfig{
 					BaseFile: tgbotapi.BaseFile{
-						BaseChat: tgbotapi.BaseChat{
-							ReplyMarkup: markUp,
-						},
+						//BaseChat: tgbotapi.BaseChat{
+						//	ReplyMarkup: markUp,
+						//},
 						File: tgbotapi.FileID(s.messages.Sender.GetAdvertisingVideo(lang, i)),
 					},
 					Caption:   text,
@@ -211,9 +211,9 @@ func (s *Service) fillMessageMap() {
 				}
 			default:
 				s.messageConfigs[i] = tgbotapi.MessageConfig{
-					BaseChat: tgbotapi.BaseChat{
-						ReplyMarkup: markUp,
-					},
+					//BaseChat: tgbotapi.BaseChat{
+					//	ReplyMarkup: markUp,
+					//},
 					Text: text,
 				}
 			}
