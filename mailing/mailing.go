@@ -153,17 +153,17 @@ func (s *Service) sendMailToUser(botLang string, user *MailingUser, respChan cha
 
 	switch s.messages.Sender.AdvertisingChoice(channel) {
 	case "photo":
-		msg := s.photoMessageConfig[botLang][channel]
+		msg := s.photoMessageConfig[channel]
 		msg.BaseChat.ChatID = user.ID
 		//msg.BaseChat = baseChat
 		respChan <- s.messages.SendMsgToUser(msg) == nil
 	case "video":
-		msg := s.videoMessageConfig[botLang][channel]
+		msg := s.videoMessageConfig[channel]
 		msg.BaseChat.ChatID = user.ID
 		//msg.BaseChat = baseChat
 		respChan <- s.messages.SendMsgToUser(msg) == nil
 	default:
-		msg := s.messageConfigs[botLang][channel]
+		msg := s.messageConfigs[channel]
 		msg.BaseChat.ChatID = user.ID
 		//msg.BaseChat = baseChat
 		respChan <- s.messages.SendMsgToUser(msg) == nil
@@ -176,7 +176,7 @@ func (s *Service) fillMessageMap() {
 			var markUp tgbotapi.InlineKeyboardMarkup
 			text := s.messages.Sender.GetAdvertText(lang, i)
 
-			s.nilConfig(lang)
+			s.nilConfig()
 
 			if !s.messages.Sender.ButtonUnderAdvert() {
 				markUp = tgbotapi.InlineKeyboardMarkup{}
@@ -188,7 +188,7 @@ func (s *Service) fillMessageMap() {
 
 			switch s.messages.Sender.AdvertisingChoice(i) {
 			case "photo":
-				s.photoMessageConfig[lang][i] = tgbotapi.PhotoConfig{
+				s.photoMessageConfig[i] = tgbotapi.PhotoConfig{
 					BaseFile: tgbotapi.BaseFile{
 						BaseChat: tgbotapi.BaseChat{
 							ReplyMarkup: markUp,
@@ -199,7 +199,7 @@ func (s *Service) fillMessageMap() {
 					ParseMode: "HTML",
 				}
 			case "video":
-				s.videoMessageConfig[lang][i] = tgbotapi.VideoConfig{
+				s.videoMessageConfig[i] = tgbotapi.VideoConfig{
 					BaseFile: tgbotapi.BaseFile{
 						BaseChat: tgbotapi.BaseChat{
 							ReplyMarkup: markUp,
@@ -210,7 +210,7 @@ func (s *Service) fillMessageMap() {
 					ParseMode: "HTML",
 				}
 			default:
-				s.messageConfigs[lang][i] = tgbotapi.MessageConfig{
+				s.messageConfigs[i] = tgbotapi.MessageConfig{
 					BaseChat: tgbotapi.BaseChat{
 						ReplyMarkup: markUp,
 					},
@@ -221,16 +221,10 @@ func (s *Service) fillMessageMap() {
 	}
 }
 
-func (s *Service) nilConfig(lang string) {
+func (s *Service) nilConfig() {
 	if s.messageConfigs == nil || s.photoMessageConfig == nil || s.videoMessageConfig == nil {
-		s.messageConfigs = make(map[string]map[int]tgbotapi.MessageConfig, 10)
-		s.photoMessageConfig = make(map[string]map[int]tgbotapi.PhotoConfig, 10)
-		s.videoMessageConfig = make(map[string]map[int]tgbotapi.VideoConfig, 10)
-	}
-
-	if s.messageConfigs[lang] == nil || s.photoMessageConfig[lang] == nil || s.videoMessageConfig[lang] == nil {
-		s.messageConfigs[lang] = make(map[int]tgbotapi.MessageConfig, 10)
-		s.photoMessageConfig[lang] = make(map[int]tgbotapi.PhotoConfig, 10)
-		s.videoMessageConfig[lang] = make(map[int]tgbotapi.VideoConfig, 10)
+		s.messageConfigs = make(map[int]tgbotapi.MessageConfig, 10)
+		s.photoMessageConfig = make(map[int]tgbotapi.PhotoConfig, 10)
+		s.videoMessageConfig = make(map[int]tgbotapi.VideoConfig, 10)
 	}
 }

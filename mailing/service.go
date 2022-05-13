@@ -8,9 +8,9 @@ import (
 type Service struct {
 	messages *msgs.Service
 
-	messageConfigs     map[string]map[int]tgbotapi.MessageConfig
-	photoMessageConfig map[string]map[int]tgbotapi.PhotoConfig
-	videoMessageConfig map[string]map[int]tgbotapi.VideoConfig
+	messageConfigs     map[int]tgbotapi.MessageConfig
+	photoMessageConfig map[int]tgbotapi.PhotoConfig
+	videoMessageConfig map[int]tgbotapi.VideoConfig
 
 	usersPerIteration int
 }
