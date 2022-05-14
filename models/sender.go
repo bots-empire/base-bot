@@ -7,6 +7,7 @@ import (
 )
 
 type Sender interface {
+	GetBotLang() string
 	GetBot() *tgbotapi.BotAPI
 	GetDataBase() *sql.DB
 

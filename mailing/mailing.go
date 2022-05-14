@@ -168,33 +168,32 @@ func (s *Service) sendMailToUser(botLang string, user *MailingUser, respChan cha
 }
 
 func (s *Service) fillMessageMap() {
-	for _, lang := range s.messages.Sender.AvailableLang() {
-		for i := 1; i < 6; i++ {
-			text := s.messages.Sender.GetAdvertText(lang, i)
+	lang := s.messages.Sender.GetBotLang()
+	for i := 1; i < 6; i++ {
+		text := s.messages.Sender.GetAdvertText(lang, i)
 
-			s.nilConfig()
+		s.nilConfig()
 
-			switch s.messages.Sender.AdvertisingChoice(i) {
-			case "photo":
-				s.photoMessageConfig[i] = tgbotapi.PhotoConfig{
-					BaseFile: tgbotapi.BaseFile{
-						File: tgbotapi.FileID(s.messages.Sender.GetAdvertisingPhoto(lang, i)),
-					},
-					Caption:   text,
-					ParseMode: "HTML",
-				}
-			case "video":
-				s.videoMessageConfig[i] = tgbotapi.VideoConfig{
-					BaseFile: tgbotapi.BaseFile{
-						File: tgbotapi.FileID(s.messages.Sender.GetAdvertisingVideo(lang, i)),
-					},
-					Caption:   text,
-					ParseMode: "HTML",
-				}
-			default:
-				s.messageConfigs[i] = tgbotapi.MessageConfig{
-					Text: text,
-				}
+		switch s.messages.Sender.AdvertisingChoice(i) {
+		case "photo":
+			s.photoMessageConfig[i] = tgbotapi.PhotoConfig{
+				BaseFile: tgbotapi.BaseFile{
+					File: tgbotapi.FileID(s.messages.Sender.GetAdvertisingPhoto(lang, i)),
+				},
+				Caption:   text,
+				ParseMode: "HTML",
+			}
+		case "video":
+			s.videoMessageConfig[i] = tgbotapi.VideoConfig{
+				BaseFile: tgbotapi.BaseFile{
+					File: tgbotapi.FileID(s.messages.Sender.GetAdvertisingVideo(lang, i)),
+				},
+				Caption:   text,
+				ParseMode: "HTML",
+			}
+		default:
+			s.messageConfigs[i] = tgbotapi.MessageConfig{
+				Text: text,
 			}
 		}
 	}
