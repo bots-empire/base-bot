@@ -10,50 +10,51 @@ import (
 )
 
 const (
-	GlobalMailing = 4
+	GlobalMailing  = 4
+	ActiveStatus   = "active"
+	InactiveStatus = "inactive"
+	DeletedStatus  = "deleted"
 )
 
 type MailingUser struct {
 	ID            int64
 	Language      string
 	AdvertChannel int
+	Status        string
 }
 
 func (s *Service) StartMailing(botLang string, initiatorID int64, channel int) {
 	startTime := time.Now()
-	s.fillMessageMap()
-
-	var (
-		sendToUsers  int
-		blockedUsers int
-	)
 
 	s.messages.SendNotificationToDeveloper(
 		fmt.Sprintf("%s // mailing started", botLang),
 		false,
 	)
 
-	for offset := 0; ; offset += s.usersPerIteration {
-		countSend, errCount := s.mailToUserWithPagination(botLang, offset, channel)
-		if countSend == -1 {
-			s.sendRespMsgToMailingInitiator(initiatorID, "failing_mailing_text", sendToUsers)
-			break
+	if channel != GlobalMailing {
+		err := s.UpdateStatusChannel(ActiveStatus, channel, InactiveStatus)
+		if err != nil {
+			s.messages.SendNotificationToDeveloper("failed to update status",
+				false,
+			)
 		}
-
-		if countSend == 0 && errCount == 0 {
-			break
+	} else {
+		err := s.UpdateStatusAll(ActiveStatus, InactiveStatus)
+		if err != nil {
+			s.messages.SendNotificationToDeveloper("failed to update status",
+				false,
+			)
 		}
-
-		sendToUsers += countSend
-		blockedUsers += errCount
 	}
 
+	countSend, _ := s.mailToUserWithPagination(initiatorID)
+
 	s.messages.SendNotificationToDeveloper(
-		fmt.Sprintf("%s // send to %d users mail; latency: %v", botLang, sendToUsers, time.Now().Sub(startTime)),
+		fmt.Sprintf("%s // send to %d users mail; latency: %v", botLang, countSend, time.Now().Sub(startTime)),
 		false,
 	)
 
-	s.sendRespMsgToMailingInitiator(initiatorID, "complete_mailing_text", sendToUsers)
+	s.sendRespMsgToMailingInitiator(initiatorID, "complete_mailing_text", countSend)
 
 	s.messages.Sender.UpdateBlockedUsers(channel)
 }
@@ -65,15 +66,36 @@ func (s *Service) sendRespMsgToMailingInitiator(userID int64, key string, countO
 	_ = s.messages.NewParseMessage(userID, text)
 }
 
-func (s *Service) mailToUserWithPagination(botLang string, offset int, channel int) (int, int) {
-	users, err := s.getUsersWithPagination(offset)
+func (s *Service) mailToUserWithPagination(initiatorID int64) (int, int) {
+	var countSend int
+	var totalCount int
+
+	for offset := 0; ; offset += s.usersPerIteration {
+		sendToUsers, countUsers := s.Mailing()
+
+		if sendToUsers == -1 {
+			s.sendRespMsgToMailingInitiator(initiatorID, "failing_mailing_text", sendToUsers)
+			break
+		}
+
+		if sendToUsers == 0 && countUsers-sendToUsers == 0 {
+			break
+		}
+
+		countSend += sendToUsers
+		totalCount += countUsers
+	}
+
+	return countSend, totalCount - countSend
+}
+
+func (s *Service) Mailing() (int, int) {
+	users, err := s.getUsersWithPagination(s.usersPerIteration)
 	if err != nil {
 		s.messages.SendNotificationToDeveloper(
 			errors.Wrap(err, "get users with pagination").Error(),
 			false,
 		)
-
-		return -1, 0
 	}
 
 	totalCount := len(users)
@@ -81,11 +103,20 @@ func (s *Service) mailToUserWithPagination(botLang string, offset int, channel i
 		return 0, 0
 	}
 
+	sendToUsers := s.SendingMail(users)
+
+	return sendToUsers, totalCount
+}
+
+func (s *Service) SendingMail(users []*MailingUser) int {
+	s.fillMessageMap()
 	responseChan := make(chan bool)
 	var sendToUsers int
 
 	for _, user := range users {
-		go s.sendMailToUser(botLang, user, responseChan, channel)
+		if user.Status == InactiveStatus {
+			go s.sendMailToUser(user, responseChan)
+		}
 	}
 
 	for countOfResp := 0; countOfResp < len(users); countOfResp++ {
@@ -97,7 +128,37 @@ func (s *Service) mailToUserWithPagination(botLang string, offset int, channel i
 		}
 	}
 
-	return sendToUsers, totalCount - sendToUsers
+	return sendToUsers
+}
+
+func (s *Service) UpdateStatusChannel(currentStatus string, channel int, status string) error {
+	_, err := s.messages.Sender.GetDataBase().Exec(`
+UPDATE users SET status = ? WHERE advert_channel = ? AND status = ?;`, status, channel, currentStatus)
+	if err != nil {
+		return errors.Wrap(err, "failed execute query")
+	}
+
+	return nil
+}
+
+func (s *Service) UpdateStatusChannelFromID(id int64, status string, channel int) error {
+	_, err := s.messages.Sender.GetDataBase().Exec(`
+UPDATE users SET status = ? WHERE advert_channel = ? AND id = ?;`, status, channel, id)
+	if err != nil {
+		return errors.Wrap(err, "failed execute query")
+	}
+
+	return nil
+}
+
+func (s *Service) UpdateStatusAll(currentStatus string, status string) error {
+	_, err := s.messages.Sender.GetDataBase().Exec(`
+UPDATE users SET status = ? WHERE status = ?;`, status, currentStatus)
+	if err != nil {
+		return errors.Wrap(err, "failed execute query")
+	}
+
+	return nil
 }
 
 func (s *Service) getUsersWithPagination(offset int) ([]*MailingUser, error) {
@@ -132,13 +193,9 @@ ORDER BY id
 	return users, nil
 }
 
-func (s *Service) sendMailToUser(botLang string, user *MailingUser, respChan chan<- bool, channel int) {
-	if channel == GlobalMailing {
-		channel = user.AdvertChannel
-	}
-
+func (s *Service) sendMailToUser(user *MailingUser, respChan chan<- bool) {
 	markUp := msgs.NewIlMarkUp(
-		msgs.NewIlRow(msgs.NewIlURLButton("advertisement_button_text", s.messages.Sender.GetAdvertURL(botLang, channel))),
+		msgs.NewIlRow(msgs.NewIlURLButton("advertisement_button_text", s.messages.Sender.GetAdvertURL(user.Language, user.AdvertChannel))),
 	).Build(s.messages.Sender.GetTexts(user.Language))
 	button := &markUp
 
@@ -151,19 +208,49 @@ func (s *Service) sendMailToUser(botLang string, user *MailingUser, respChan cha
 		ReplyMarkup: button,
 	}
 
-	switch s.messages.Sender.AdvertisingChoice(channel) {
+	switch s.messages.Sender.AdvertisingChoice(user.AdvertChannel) {
 	case "photo":
-		msg := s.photoMessageConfig[channel]
+		msg := s.photoMessageConfig[user.AdvertChannel]
 		msg.BaseChat = baseChat
-		respChan <- s.messages.SendMsgToUser(msg) == nil
+		err := s.messages.SendMsgToUser(msg)
+		if err != nil {
+			err := s.messages.SendMsgToUser(msg)
+			if err != nil {
+				s.UpdateStatusChannelFromID(user.ID, DeletedStatus, user.AdvertChannel)
+				respChan <- false
+			}
+		} else {
+			s.UpdateStatusChannel(InactiveStatus, user.AdvertChannel, ActiveStatus)
+			respChan <- true
+		}
 	case "video":
-		msg := s.videoMessageConfig[channel]
+		msg := s.videoMessageConfig[user.AdvertChannel]
 		msg.BaseChat = baseChat
-		respChan <- s.messages.SendMsgToUser(msg) == nil
+		err := s.messages.SendMsgToUser(msg)
+		if err != nil {
+			err := s.messages.SendMsgToUser(msg)
+			if err != nil {
+				s.UpdateStatusChannelFromID(user.ID, DeletedStatus, user.AdvertChannel)
+				respChan <- false
+			}
+		} else {
+			s.UpdateStatusChannel(InactiveStatus, user.AdvertChannel, ActiveStatus)
+			respChan <- true
+		}
 	default:
-		msg := s.messageConfigs[channel]
+		msg := s.messageConfigs[user.AdvertChannel]
 		msg.BaseChat = baseChat
-		respChan <- s.messages.SendMsgToUser(msg) == nil
+		err := s.messages.SendMsgToUser(msg)
+		if err != nil {
+			err := s.messages.SendMsgToUser(msg)
+			if err != nil {
+				s.UpdateStatusChannelFromID(user.ID, DeletedStatus, user.AdvertChannel)
+				respChan <- false
+			}
+		} else {
+			s.UpdateStatusChannel(InactiveStatus, user.AdvertChannel, ActiveStatus)
+			respChan <- true
+		}
 	}
 }
 
