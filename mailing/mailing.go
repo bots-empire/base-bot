@@ -155,15 +155,15 @@ func (s *Service) sendMailToUser(botLang string, user *MailingUser, respChan cha
 	case "photo":
 		msg := s.photoMessageConfig[channel]
 		msg.BaseChat = baseChat
-		respChan <- s.messages.SendMsgToUser(msg) == nil
+		respChan <- s.messages.SendMsgToUser(msg, user.ID) == nil
 	case "video":
 		msg := s.videoMessageConfig[channel]
 		msg.BaseChat = baseChat
-		respChan <- s.messages.SendMsgToUser(msg) == nil
+		respChan <- s.messages.SendMsgToUser(msg, user.ID) == nil
 	default:
 		msg := s.messageConfigs[channel]
 		msg.BaseChat = baseChat
-		respChan <- s.messages.SendMsgToUser(msg) == nil
+		respChan <- s.messages.SendMsgToUser(msg, user.ID) == nil
 	}
 }
 

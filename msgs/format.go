@@ -1,7 +1,9 @@
 package msgs
 
 import (
+	"strconv"
 	"strings"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -19,7 +21,7 @@ func (s *Service) NewParseMessage(chatID int64, text string) error {
 		ParseMode: "HTML",
 	}
 
-	return s.SendMsgToUser(msg)
+	return s.SendMsgToUser(msg, chatID)
 }
 
 func (s *Service) NewIDParseMessage(chatID int64, text string) (int, error) {
@@ -31,7 +33,7 @@ func (s *Service) NewIDParseMessage(chatID int64, text string) (int, error) {
 		ParseMode: "HTML",
 	}
 
-	message, err := s.Sender.GetBot().Send(msg)
+	message, err := s.sendMsgToUser(msg, chatID)
 	if err != nil {
 		return 0, nil
 	}
@@ -48,7 +50,7 @@ func (s *Service) NewParseMarkUpMessage(chatID int64, markUp interface{}, text s
 		ParseMode: "HTML",
 	}
 
-	return s.SendMsgToUser(msg)
+	return s.SendMsgToUser(msg, chatID)
 }
 
 func (s *Service) NewParseMarkUpPhotoMessage(chatID int64, markUp interface{}, text string, photo tgbotapi.RequestFileData) error {
@@ -63,7 +65,7 @@ func (s *Service) NewParseMarkUpPhotoMessage(chatID int64, markUp interface{}, t
 		ParseMode: "HTML",
 	}
 
-	return s.SendMsgToUser(msg)
+	return s.SendMsgToUser(msg, chatID)
 }
 
 func (s *Service) NewParseMarkUpVideoMessage(chatID int64, markUp interface{}, text string, video tgbotapi.RequestFileData) error {
@@ -79,7 +81,7 @@ func (s *Service) NewParseMarkUpVideoMessage(chatID int64, markUp interface{}, t
 		ParseMode: "HTML",
 	}
 
-	return s.SendMsgToUser(msg)
+	return s.SendMsgToUser(msg, chatID)
 }
 
 func (s *Service) NewIDParseMarkUpMessage(chatID int64, markUp interface{}, text string) (int, error) {
@@ -93,7 +95,7 @@ func (s *Service) NewIDParseMarkUpMessage(chatID int64, markUp interface{}, text
 		DisableWebPagePreview: true,
 	}
 
-	message, err := s.Sender.GetBot().Send(msg)
+	message, err := s.sendMsgToUser(msg, chatID)
 	if err != nil {
 		return 0, err
 	}
@@ -112,7 +114,7 @@ func (s *Service) NewEditMarkUpMessage(userID int64, msgID int, markUp *tgbotapi
 		DisableWebPagePreview: true,
 	}
 
-	return s.SendMsgToUser(msg)
+	return s.SendMsgToUser(msg, userID)
 }
 
 func (s *Service) SendAnswerCallback(callbackQuery *tgbotapi.CallbackQuery, text string) error {
@@ -121,7 +123,7 @@ func (s *Service) SendAnswerCallback(callbackQuery *tgbotapi.CallbackQuery, text
 		Text:            text,
 	}
 
-	_ = s.SendMsgToUser(answerCallback)
+	_ = s.SendMsgToUser(answerCallback, callbackQuery.From.ID)
 	return nil
 }
 
@@ -132,21 +134,72 @@ func (s *Service) SendAdminAnswerCallback(callbackQuery *tgbotapi.CallbackQuery,
 		Text:            s.Sender.AdminText(lang, text),
 	}
 
-	_ = s.SendMsgToUser(answerCallback)
+	_ = s.SendMsgToUser(answerCallback, callbackQuery.From.ID)
 	return nil
 }
 
 func (s *Service) SendSimpleMsg(chatID int64, text string) error {
 	msg := tgbotapi.NewMessage(chatID, s.insertCurrency(text))
 
-	return s.SendMsgToUser(msg)
+	return s.SendMsgToUser(msg, chatID)
 }
 
-func (s *Service) SendMsgToUser(msg tgbotapi.Chattable) error {
-	if _, err := s.Sender.GetBot().Send(msg); err != nil {
-		return err
+func (s *Service) SendMsgToUser(msg tgbotapi.Chattable, userID int64) error {
+	_, err := s.sendMsgToUser(msg, userID)
+	return err
+}
+
+func (s *Service) sendMsgToUser(msg tgbotapi.Chattable, userID int64) (tgbotapi.Message, error) {
+	var returnErr error
+
+	for i := 0; i < 10; i++ {
+		sendMsg, err := s.Sender.GetBot().Send(msg)
+		if err == nil {
+			return sendMsg, nil
+		}
+
+		if s.errorHandler(err, userID) {
+			return tgbotapi.Message{}, nil
+		}
+
+		returnErr = err
+
+		time.Sleep(time.Second)
 	}
-	return nil
+
+	return tgbotapi.Message{}, returnErr
+}
+
+func (s *Service) errorHandler(err error, userID int64) bool {
+	if err.Error() == "Forbidden: bot was blocked by the user" ||
+		err.Error() == "Forbidden: bot can't initiate conversation with a user" {
+		if blockErr := s.Sender.BlockUser(userID); err != nil {
+			s.SendNotificationToDeveloper(blockErr.Error(), false)
+		}
+
+		return true
+	}
+
+	if strings.Contains(err.Error(), "Too Many Requests: retry after") {
+		splitTime := time.Duration(getSleepTimeFromErr(err.Error()))
+		time.Sleep(splitTime * time.Second)
+	}
+
+	return false
+}
+
+func getSleepTimeFromErr(err string) int {
+	splitErr := strings.Split(err, " ")
+	for i, word := range splitErr {
+		if word == "after" {
+			if len(splitErr) > i {
+				num, _ := strconv.Atoi(splitErr[i+1])
+				return num
+			}
+		}
+	}
+
+	return 0
 }
 
 func (s *Service) SendNotificationToDeveloper(text string, needPin bool) {
@@ -163,7 +216,7 @@ func (s *Service) PinMsgToDeveloper(userID int64, msgID int) {
 	_ = s.SendMsgToUser(tgbotapi.PinChatMessageConfig{
 		ChatID:    userID,
 		MessageID: msgID,
-	})
+	}, userID)
 }
 
 func (s *Service) insertCurrency(text string) string {

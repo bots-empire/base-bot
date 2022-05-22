@@ -27,4 +27,6 @@ type Sender interface {
 	GetAdvertisingVideo(lang string, channel int) string
 	ButtonUnderAdvert() bool
 	AdvertisingChoice(channel int) string
+
+	BlockUser(userID int64) error
 }
