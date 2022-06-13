@@ -174,7 +174,25 @@ func (s *Service) sendMailToUser(wg *sync.WaitGroup, user *MailingUser) {
 		return
 	}
 
+	if err = s.markReadyMailingUser(user.ID); err != nil {
+		s.sendErrorToAdmin(err)
+	}
+
 	s.messages.Sender.GetMetrics("total_mailing_users").WithLabelValues(s.messages.Sender.GetBotLang()).Inc()
+}
+
+func (s *Service) markReadyMailingUser(userID int64) error {
+	_, err := s.messages.Sender.GetDataBase().Exec(`
+UPDATE users 
+	SET status = ? 
+WHERE id = ?;`,
+		statusActive,
+		userID)
+	if err != nil {
+		return errors.Wrap(err, "failed execute query")
+	}
+
+	return nil
 }
 
 func (s *Service) fillMessageMap() {
