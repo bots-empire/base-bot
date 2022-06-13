@@ -13,7 +13,6 @@ import (
 
 const (
 	statusActive      = "active"
-	statusDeleted     = "deleted"
 	statusNeedMailing = "mailing"
 )
 
