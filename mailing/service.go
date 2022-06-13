@@ -30,10 +30,10 @@ func (s *Service) init() *Service {
 	return s
 }
 
-func (s *Service) debugModeOn() {
+func (s *Service) DebugModeOn() {
 	s.debugMode = true
 }
 
-func (s *Service) debugModeOff() {
+func (s *Service) DebugModeOff() {
 	s.debugMode = false
 }
