@@ -3,6 +3,7 @@ package mailing
 import (
 	"database/sql"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/bots-empire/base-bot/msgs"
@@ -35,9 +36,14 @@ func (s *Service) startSenderHandler() {
 			continue
 		}
 
+		wg := &sync.WaitGroup{}
+		wg.Add(len(users))
+
 		for _, user := range users {
-			go s.sendMailToUser(user)
+			go s.sendMailToUser(wg, user)
 		}
+
+		wg.Wait()
 	}
 }
 
@@ -84,13 +90,16 @@ func (s *Service) errorHandler(err error) {
 	s.messages.SendNotificationToDeveloper(fmt.Sprintf("%s  //  error in mailing: %s", s.messages.Sender.GetBotLang(), err), false)
 	time.Sleep(3 * time.Second)
 }
+func (s *Service) sendErrorToAdmin(err error) {
+	s.messages.SendNotificationToDeveloper(fmt.Sprintf("%s  //  error in mailing: %s", s.messages.Sender.GetBotLang(), err), false)
+}
 
 func (s *Service) stopHandler() {
 	<-s.startSignaller
 	s.messages.SendNotificationToDeveloper(fmt.Sprintf("%s  //  mailing handler started", s.messages.Sender.GetBotLang()), false)
 }
 
-func (s *Service) StartMailing() error {
+func (s *Service) StartMailing(channels []int) error {
 	s.fillMessageMap()
 
 	s.messages.SendNotificationToDeveloper(
@@ -98,16 +107,27 @@ func (s *Service) StartMailing() error {
 		false,
 	)
 
-	return s.markMailingUsers()
+	for _, userChannel := range channels {
+		err := s.markMailingUsers(userChannel)
+		if err != nil {
+			return err
+		}
+	}
+
+	s.startSignaller <- true
+
+	return nil
 }
 
-func (s *Service) markMailingUsers() error {
+func (s *Service) markMailingUsers(usersChan int) error {
 	_, err := s.messages.Sender.GetDataBase().Exec(`
 UPDATE users 
 	SET status = ? 
-WHERE status = ?;`,
+WHERE status = ?
+	AND advert_channel = ?;`,
 		statusNeedMailing,
-		statusActive)
+		statusActive,
+		usersChan)
 	if err != nil {
 		return errors.Wrap(err, "failed execute query")
 	}
@@ -115,7 +135,8 @@ WHERE status = ?;`,
 	return nil
 }
 
-func (s *Service) sendMailToUser(user *MailingUser) {
+func (s *Service) sendMailToUser(wg *sync.WaitGroup, user *MailingUser) {
+	defer wg.Done()
 
 	markUp := msgs.NewIlMarkUp(
 		msgs.NewIlRow(msgs.NewIlURLButton("advertisement_button_text",
@@ -150,8 +171,11 @@ func (s *Service) sendMailToUser(user *MailingUser) {
 	}
 
 	if err != nil {
-		s.messages.SendNotificationToDeveloper(fmt.Sprintf("error in send mailing to user: %s", err), false)
+		s.sendErrorToAdmin(err)
+		return
 	}
+
+	s.messages.Sender.GetMetrics("total_mailing_users").WithLabelValues(s.messages.Sender.GetBotLang()).Inc()
 }
 
 func (s *Service) fillMessageMap() {

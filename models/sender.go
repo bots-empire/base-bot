@@ -4,6 +4,7 @@ import (
 	"database/sql"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type Sender interface {
@@ -29,4 +30,5 @@ type Sender interface {
 	AdvertisingChoice(channel int) string
 
 	BlockUser(userID int64) error
+	GetMetrics(metricKey string) *prometheus.CounterVec
 }
