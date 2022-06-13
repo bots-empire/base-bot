@@ -1,6 +1,7 @@
 package msgs
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -171,6 +172,7 @@ func (s *Service) sendMsgToUser(msg tgbotapi.Chattable, userID int64) (tgbotapi.
 }
 
 func (s *Service) errorHandler(err error, userID int64) bool {
+	fmt.Println(err)
 	if err.Error() == "Forbidden: bot was blocked by the user" ||
 		err.Error() == "Forbidden: bot can't initiate conversation with a user" ||
 		err.Error() == "json: cannot unmarshal bool into Go value of type tgbotapi.Message" {
