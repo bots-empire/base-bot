@@ -12,12 +12,28 @@ type Service struct {
 	photoMessageConfig map[int]tgbotapi.PhotoConfig
 	videoMessageConfig map[int]tgbotapi.VideoConfig
 
+	startSignaller    chan interface{}
 	usersPerIteration int
+	debugMode         bool
 }
 
 func NewService(messages *msgs.Service, userPerIter int) *Service {
-	return &Service{
+	return (&Service{
 		messages:          messages,
+		startSignaller:    make(chan interface{}, 1),
 		usersPerIteration: userPerIter,
-	}
+	}).init()
+}
+
+func (s *Service) init() *Service {
+	go s.startSenderHandler()
+	return s
+}
+
+func (s *Service) debugModeOn() {
+	s.debugMode = true
+}
+
+func (s *Service) debugModeOff() {
+	s.debugMode = false
 }

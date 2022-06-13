@@ -1,6 +1,7 @@
 package mailing
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -10,7 +11,9 @@ import (
 )
 
 const (
-	GlobalMailing = 4
+	statusActive      = "active"
+	statusDeleted     = "deleted"
+	statusNeedMailing = "mailing"
 )
 
 type MailingUser struct {
@@ -19,110 +22,55 @@ type MailingUser struct {
 	AdvertChannel int
 }
 
-func (s *Service) StartMailing(botLang string, initiatorID int64, channel int) {
-	startTime := time.Now()
-	s.fillMessageMap()
-
-	var (
-		sendToUsers  int
-		blockedUsers int
-	)
-
-	s.messages.SendNotificationToDeveloper(
-		fmt.Sprintf("%s // mailing started", botLang),
-		false,
-	)
-
-	for offset := 0; ; offset += s.usersPerIteration {
-		countSend, errCount := s.mailToUserWithPagination(botLang, offset, channel)
-		if countSend == -1 {
-			s.sendRespMsgToMailingInitiator(initiatorID, "failing_mailing_text", sendToUsers)
-			break
+func (s *Service) startSenderHandler() {
+	for {
+		users, err := s.getUsersWithMailing()
+		if err != nil {
+			s.errorHandler(err)
+			continue
 		}
 
-		if countSend == 0 && errCount == 0 {
-			break
+		if len(users) == 0 {
+			s.stopHandler()
+			continue
 		}
 
-		sendToUsers += countSend
-		blockedUsers += errCount
-	}
-
-	s.messages.SendNotificationToDeveloper(
-		fmt.Sprintf("%s // send to %d users mail; latency: %v", botLang, sendToUsers, time.Now().Sub(startTime)),
-		false,
-	)
-
-	s.sendRespMsgToMailingInitiator(initiatorID, "complete_mailing_text", sendToUsers)
-
-	s.messages.Sender.UpdateBlockedUsers(channel)
-}
-
-func (s *Service) sendRespMsgToMailingInitiator(userID int64, key string, countOfSends int) {
-	lang := s.messages.Sender.AdminLang(userID)
-	text := fmt.Sprintf(s.messages.Sender.AdminText(lang, key), countOfSends)
-
-	_ = s.messages.NewParseMessage(userID, text)
-}
-
-func (s *Service) mailToUserWithPagination(botLang string, offset int, channel int) (int, int) {
-	users, err := s.getUsersWithPagination(offset)
-	if err != nil {
-		s.messages.SendNotificationToDeveloper(
-			errors.Wrap(err, "get users with pagination").Error(),
-			false,
-		)
-
-		return -1, 0
-	}
-
-	totalCount := len(users)
-	if totalCount == 0 {
-		return 0, 0
-	}
-
-	responseChan := make(chan bool)
-	var sendToUsers int
-
-	for _, user := range users {
-		go s.sendMailToUser(botLang, user, responseChan, channel)
-	}
-
-	for countOfResp := 0; countOfResp < len(users); countOfResp++ {
-		select {
-		case resp := <-responseChan:
-			if resp {
-				sendToUsers++
-			}
+		for _, user := range users {
+			go s.sendMailToUser(user)
 		}
 	}
-
-	return sendToUsers, totalCount - sendToUsers
 }
 
-func (s *Service) getUsersWithPagination(offset int) ([]*MailingUser, error) {
+func (s *Service) getUsersWithMailing() ([]*MailingUser, error) {
 	rows, err := s.messages.Sender.GetDataBase().Query(`
-SELECT id, lang, advert_channel 
-	FROM users 
-ORDER BY id 
-	LIMIT ? 
-	OFFSET ?;`,
-		s.usersPerIteration,
-		offset)
+SELECT id, lang, advert_channel
+	FROM users
+WHERE status = ?
+ORDER BY id
+	LIMIT ?;`,
+		statusNeedMailing,
+		s.usersPerIteration)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed execute query")
 	}
 
+	return s.readUsersFromRows(rows)
+}
+
+func (s *Service) readUsersFromRows(rows *sql.Rows) ([]*MailingUser, error) {
 	var users []*MailingUser
 
 	for rows.Next() {
 		user := &MailingUser{}
 
-		if err := rows.Scan(&user.ID, &user.Language, &user.AdvertChannel); err != nil {
+		if err := rows.Scan(
+			&user.ID,
+			&user.Language,
+			&user.AdvertChannel); err != nil {
 			return nil, errors.Wrap(err, "failed scan row")
 		}
 
-		if s.messages.Sender.CheckAdmin(user.ID) {
+		if s.messages.Sender.CheckAdmin(user.ID) && !s.debugMode {
 			continue
 		}
 
@@ -132,13 +80,47 @@ ORDER BY id
 	return users, nil
 }
 
-func (s *Service) sendMailToUser(botLang string, user *MailingUser, respChan chan<- bool, channel int) {
-	if channel == GlobalMailing {
-		channel = user.AdvertChannel
+func (s *Service) errorHandler(err error) {
+	s.messages.SendNotificationToDeveloper(fmt.Sprintf("%s  //  error in mailing: %s", s.messages.Sender.GetBotLang(), err), false)
+	time.Sleep(3 * time.Second)
+}
+
+func (s *Service) stopHandler() {
+	<-s.startSignaller
+	s.messages.SendNotificationToDeveloper(fmt.Sprintf("%s  //  mailing handler started", s.messages.Sender.GetBotLang()), false)
+}
+
+func (s *Service) StartMailing() error {
+	s.fillMessageMap()
+
+	s.messages.SendNotificationToDeveloper(
+		fmt.Sprintf("%s // mailing started", s.messages.Sender.GetBotLang()),
+		false,
+	)
+
+	return s.markMailingUsers()
+}
+
+func (s *Service) markMailingUsers() error {
+	_, err := s.messages.Sender.GetDataBase().Exec(`
+UPDATE users 
+	SET status = ? 
+WHERE status = ?;`,
+		statusNeedMailing,
+		statusActive)
+	if err != nil {
+		return errors.Wrap(err, "failed execute query")
 	}
 
+	return nil
+}
+
+func (s *Service) sendMailToUser(user *MailingUser) {
+
 	markUp := msgs.NewIlMarkUp(
-		msgs.NewIlRow(msgs.NewIlURLButton("advertisement_button_text", s.messages.Sender.GetAdvertURL(botLang, channel))),
+		msgs.NewIlRow(msgs.NewIlURLButton("advertisement_button_text",
+			s.messages.Sender.GetAdvertURL(s.messages.Sender.GetBotLang(), user.AdvertChannel)),
+		),
 	).Build(s.messages.Sender.GetTexts(user.Language))
 	button := &markUp
 
@@ -151,19 +133,24 @@ func (s *Service) sendMailToUser(botLang string, user *MailingUser, respChan cha
 		ReplyMarkup: button,
 	}
 
-	switch s.messages.Sender.AdvertisingChoice(channel) {
+	var err error
+	switch s.messages.Sender.AdvertisingChoice(user.AdvertChannel) {
 	case "photo":
-		msg := s.photoMessageConfig[channel]
+		msg := s.photoMessageConfig[user.AdvertChannel]
 		msg.BaseChat = baseChat
-		respChan <- s.messages.SendMsgToUser(msg, user.ID) == nil
+		err = s.messages.SendMsgToUser(msg, user.ID)
 	case "video":
-		msg := s.videoMessageConfig[channel]
+		msg := s.videoMessageConfig[user.AdvertChannel]
 		msg.BaseChat = baseChat
-		respChan <- s.messages.SendMsgToUser(msg, user.ID) == nil
+		err = s.messages.SendMsgToUser(msg, user.ID)
 	default:
-		msg := s.messageConfigs[channel]
+		msg := s.messageConfigs[user.AdvertChannel]
 		msg.BaseChat = baseChat
-		respChan <- s.messages.SendMsgToUser(msg, user.ID) == nil
+		err = s.messages.SendMsgToUser(msg, user.ID)
+	}
+
+	if err != nil {
+		s.messages.SendNotificationToDeveloper(fmt.Sprintf("error in send mailing to user: %s", err), false)
 	}
 }
 
