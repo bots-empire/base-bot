@@ -144,6 +144,11 @@ func (s *Service) SendSimpleMsg(chatID int64, text string) error {
 	return s.SendMsgToUser(msg, chatID)
 }
 
+func (s *Service) SendMailToUser(msg tgbotapi.Chattable, userID int64) (error, bool) {
+	sendMsg, err := s.sendMsgToUser(msg, userID)
+	return err, sendMsg.MessageID != -1
+}
+
 func (s *Service) SendMsgToUser(msg tgbotapi.Chattable, userID int64) error {
 	_, err := s.sendMsgToUser(msg, userID)
 	return err
@@ -159,7 +164,9 @@ func (s *Service) sendMsgToUser(msg tgbotapi.Chattable, userID int64) (tgbotapi.
 		}
 
 		if s.errorHandler(err, userID) {
-			return tgbotapi.Message{}, nil
+			return tgbotapi.Message{
+				MessageID: -1,
+			}, nil
 		}
 
 		returnErr = err
@@ -171,8 +178,9 @@ func (s *Service) sendMsgToUser(msg tgbotapi.Chattable, userID int64) (tgbotapi.
 }
 
 func (s *Service) errorHandler(err error, userID int64) bool {
-	if err.Error() == "Forbidden: bot was blocked by the user" ||
-		err.Error() == "Forbidden: bot can't initiate conversation with a user" {
+	errConvert := err.(*tgbotapi.Error)
+
+	if errConvert.Code == 403 {
 		if blockErr := s.Sender.BlockUser(userID); blockErr != nil {
 			s.SendNotificationToDeveloper(blockErr.Error(), false)
 		}
@@ -180,7 +188,8 @@ func (s *Service) errorHandler(err error, userID int64) bool {
 		return true
 	}
 
-	if err.Error() == "json: cannot unmarshal bool into Go value of type tgbotapi.Message" {
+	if errConvert.Error() == "json: cannot unmarshal bool into Go value of type tgbotapi.Message" ||
+		errConvert.Error() == "Bad Request: query is too old and response timeout expired or query ID is invalid" {
 		return true
 	}
 

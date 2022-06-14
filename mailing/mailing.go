@@ -155,20 +155,29 @@ func (s *Service) sendMailToUser(wg *sync.WaitGroup, user *MailingUser) {
 		ReplyMarkup: button,
 	}
 
-	var err error
+	var (
+		err  error
+		send bool
+	)
+
 	switch s.messages.Sender.AdvertisingChoice(user.AdvertChannel) {
 	case "photo":
 		msg := s.photoMessageConfig[user.AdvertChannel]
 		msg.BaseChat = baseChat
-		err = s.messages.SendMsgToUser(msg, user.ID)
+		err, send = s.messages.SendMailToUser(msg, user.ID)
 	case "video":
 		msg := s.videoMessageConfig[user.AdvertChannel]
 		msg.BaseChat = baseChat
-		err = s.messages.SendMsgToUser(msg, user.ID)
+		err, send = s.messages.SendMailToUser(msg, user.ID)
 	default:
 		msg := s.messageConfigs[user.AdvertChannel]
 		msg.BaseChat = baseChat
-		err = s.messages.SendMsgToUser(msg, user.ID)
+		err, send = s.messages.SendMailToUser(msg, user.ID)
+	}
+
+	if !send {
+		s.messages.Sender.GetMetrics("total_block_users").WithLabelValues(s.messages.Sender.GetBotLang()).Inc()
+		return
 	}
 
 	if err != nil {
