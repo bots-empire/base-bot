@@ -23,6 +23,8 @@ type MailingUser struct {
 }
 
 func (s *Service) startSenderHandler() {
+	s.fillMessageMap()
+
 	for {
 		users, err := s.getUsersWithMailing()
 		if err != nil {
