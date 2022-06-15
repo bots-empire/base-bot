@@ -42,7 +42,6 @@ func (s *Service) startSenderHandler() {
 
 		for _, user := range users {
 			go s.sendMailToUser(wg, user)
-			time.Sleep(10 * time.Second)
 		}
 
 		wg.Wait()
