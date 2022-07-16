@@ -180,6 +180,7 @@ func (s *Service) sendMsgToUser(msg tgbotapi.Chattable, userID int64) (tgbotapi.
 func (s *Service) errorHandler(err error, userID int64) bool {
 	if err.Error() == "Forbidden: bot was blocked by the user" ||
 		err.Error() == "Forbidden: bot can't initiate conversation with a user" ||
+		err.Error() == "Forbidden: bot can't send messages to the user" ||
 		err.Error() == "Forbidden: user is deactivated" ||
 		err.Error() == "Bad Request: chat not found" ||
 		err.Error() == "Forbidden: bot can't send messages to bots" {
