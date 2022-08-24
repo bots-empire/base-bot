@@ -6,9 +6,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bots-empire/base-bot/msgs"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/pkg/errors"
+
+	"github.com/bots-empire/base-bot/msgs"
 )
 
 const (
@@ -52,7 +53,7 @@ func (s *Service) getUsersWithMailing() ([]*MailingUser, error) {
 	rows, err := s.messages.Sender.GetDataBase().Query(`
 SELECT id, lang, advert_channel
 	FROM users
-WHERE status = ?
+WHERE status = ? OR status = ''
 ORDER BY id
 	LIMIT ?;`,
 		statusNeedMailing,
