@@ -60,7 +60,8 @@ func (s *Service) NewParseMarkUpPhotoMessage(chatID int64, markUp interface{}, t
 				ChatID:      chatID,
 				ReplyMarkup: markUp,
 			},
-			File: photo},
+			File: photo,
+		},
 		Caption:   s.insertCurrency(text),
 		ParseMode: "HTML",
 	}
@@ -83,7 +84,7 @@ func (s *Service) NewMediaMessage(chatID int64, text string, media tgbotapi.Requ
 	return s.SendMsgToUser(msg, chatID)
 }
 
-func (s *Service) NewParseMarkUpMediaMessage(chatID int64, markUp interface{}, text string, media tgbotapi.RequestFileData) error {
+func (s *Service) NewParseMarkUpVideoMessage(chatID int64, markUp interface{}, text string, media tgbotapi.RequestFileData) error {
 	msg := tgbotapi.VideoConfig{
 		BaseFile: tgbotapi.BaseFile{
 			BaseChat: tgbotapi.BaseChat{
