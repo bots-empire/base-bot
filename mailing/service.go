@@ -1,8 +1,9 @@
 package mailing
 
 import (
-	"github.com/bots-empire/base-bot/msgs"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+
+	"github.com/bots-empire/base-bot/msgs"
 )
 
 type Service struct {
