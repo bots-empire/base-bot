@@ -53,9 +53,9 @@ func (s *Service) getUsersWithMailing() ([]*MailingUser, error) {
 	rows, err := s.messages.Sender.GetDataBase().Query(`
 SELECT id, lang, advert_channel
 	FROM users
-WHERE status = ? OR status = ''
+WHERE status = $1 OR status = ''
 ORDER BY id
-	LIMIT ?;`,
+	LIMIT $2;`,
 		statusNeedMailing,
 		s.usersPerIteration)
 	if err != nil {
@@ -124,9 +124,9 @@ func (s *Service) StartMailing(channels []int) error {
 func (s *Service) markMailingUsers(usersChan int) error {
 	_, err := s.messages.Sender.GetDataBase().Exec(`
 UPDATE users 
-	SET status = ? 
-WHERE status = ?
-	AND advert_channel = ?;`,
+	SET status = $1 
+WHERE status = $2
+	AND advert_channel = $3;`,
 		statusNeedMailing,
 		statusActive,
 		usersChan)
@@ -196,8 +196,8 @@ func (s *Service) sendMailToUser(wg *sync.WaitGroup, user *MailingUser) {
 func (s *Service) markReadyMailingUser(userID int64) error {
 	_, err := s.messages.Sender.GetDataBase().Exec(`
 UPDATE users 
-	SET status = ? 
-WHERE id = ?;`,
+	SET status = $1 
+WHERE id = $2;`,
 		statusActive,
 		userID)
 	if err != nil {
