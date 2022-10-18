@@ -1,6 +1,7 @@
 package msgs
 
 import (
+	"github.com/bots-empire/base-bot/models"
 	"strconv"
 	"strings"
 	"time"
@@ -187,6 +188,8 @@ func (s *Service) sendMsgToUser(msg tgbotapi.Chattable, userID int64) (tgbotapi.
 		}
 
 		returnErr = err
+
+		models.SomeMetric.WithLabelValues(s.Sender.GetBotLang()).Inc()
 
 		time.Sleep(time.Second)
 	}
