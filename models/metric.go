@@ -9,7 +9,7 @@ var (
 	InputMessage = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "total_input_send_message",
-			Help: "Total count send message",
+			Help: "Total incoming messages",
 		},
 		[]string{"bot_lang"},
 	)
@@ -17,7 +17,7 @@ var (
 	OutputMessage = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "total_output_send_message",
-			Help: "Total count send message",
+			Help: "Total sent messages",
 		},
 		[]string{"bot_lang"},
 	)
