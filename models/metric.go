@@ -22,8 +22,3 @@ var (
 		[]string{"bot_lang"},
 	)
 )
-
-func init() {
-	prometheus.MustRegister(InputMessage)
-	prometheus.MustRegister(OutputMessage)
-}
