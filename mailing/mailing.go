@@ -52,7 +52,7 @@ func (s *Service) startSenderHandler() {
 func (s *Service) getUsersWithMailing() ([]*MailingUser, error) {
 	rows, err := s.messages.Sender.GetDataBase().Query(`
 SELECT id, lang, advert_channel
-	FROM shazam.users
+	FROM users
 WHERE status = ? OR status = ''
 ORDER BY id
 	LIMIT ?;`,
@@ -123,7 +123,7 @@ func (s *Service) StartMailing(channels []int) error {
 
 func (s *Service) markMailingUsers(usersChan int) error {
 	_, err := s.messages.Sender.GetDataBase().Exec(`
-UPDATE shazam.users 
+UPDATE users 
 	SET status = ? 
 WHERE status = ?
 	AND advert_channel = ?;`,
@@ -195,7 +195,7 @@ func (s *Service) sendMailToUser(wg *sync.WaitGroup, user *MailingUser) {
 
 func (s *Service) markReadyMailingUser(userID int64) error {
 	_, err := s.messages.Sender.GetDataBase().Exec(`
-UPDATE shazam.users 
+UPDATE users 
 	SET status = ? 
 WHERE id = ?;`,
 		statusActive,
