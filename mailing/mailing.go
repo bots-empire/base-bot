@@ -59,7 +59,7 @@ ORDER BY id
 		statusNeedMailing,
 		s.usersPerIteration)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed execute query")
+		return nil, errors.Wrap(err, fmt.Sprintf("failed execute query in get users with pagination, per inter = %d", s.usersPerIteration))
 	}
 
 	return s.readUsersFromRows(rows)
@@ -131,7 +131,7 @@ WHERE status = $2
 		statusActive,
 		usersChan)
 	if err != nil {
-		return errors.Wrap(err, "failed execute query")
+		return errors.Wrap(err, fmt.Sprintf("failed execute query in mark mailing users, users chan = %d", usersChan))
 	}
 
 	return nil
@@ -201,7 +201,7 @@ WHERE id = $2;`,
 		statusActive,
 		userID)
 	if err != nil {
-		return errors.Wrap(err, "failed execute query")
+		return errors.Wrap(err, "failed execute query in mark ready user")
 	}
 
 	return nil
