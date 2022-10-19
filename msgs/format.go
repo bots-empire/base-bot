@@ -176,6 +176,7 @@ func (s *Service) sendMsgToUser(msg tgbotapi.Chattable, userID int64) (tgbotapi.
 	var returnErr error
 
 	models.InputMessage.WithLabelValues(s.Sender.GetBotLang()).Inc()
+	defer models.OutputMessage.WithLabelValues(s.Sender.GetBotLang()).Inc()
 
 	for i := 0; i < 10; i++ {
 		sendMsg, err := s.Sender.GetBot().Send(msg)
@@ -193,8 +194,6 @@ func (s *Service) sendMsgToUser(msg tgbotapi.Chattable, userID int64) (tgbotapi.
 
 		time.Sleep(time.Second)
 	}
-
-	models.OutputMessage.WithLabelValues(s.Sender.GetBotLang()).Inc()
 
 	return tgbotapi.Message{}, returnErr
 }
