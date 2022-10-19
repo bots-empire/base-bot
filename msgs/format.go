@@ -1,6 +1,7 @@
 package msgs
 
 import (
+	"github.com/bots-empire/base-bot/models"
 	"strconv"
 	"strings"
 	"time"
@@ -173,6 +174,9 @@ func (s *Service) SendMsgToUser(msg tgbotapi.Chattable, userID int64) error {
 
 func (s *Service) sendMsgToUser(msg tgbotapi.Chattable, userID int64) (tgbotapi.Message, error) {
 	var returnErr error
+
+	models.InputMessage.WithLabelValues(s.Sender.GetBotLang()).Inc()
+	defer models.OutputMessage.WithLabelValues(s.Sender.GetBotLang()).Inc()
 
 	for i := 0; i < 10; i++ {
 		sendMsg, err := s.Sender.GetBot().Send(msg)
