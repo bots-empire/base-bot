@@ -6,11 +6,19 @@ import (
 )
 
 var (
-	SomeMetric = promauto.NewCounterVec(
+	InputMessage = promauto.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "total_send_message",
 			Help: "Total count send message",
 		},
-		[]string{"bot_lang"},
+		[]string{"bot_lang", "input"},
+	)
+
+	OutputMessage = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "total_send_message",
+			Help: "Total count send message",
+		},
+		[]string{"bot_lang", "output"},
 	)
 )
