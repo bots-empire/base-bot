@@ -11,6 +11,7 @@ type Sender interface {
 	GetBotLang() string
 	GetBot() *tgbotapi.BotAPI
 	GetDataBase() *sql.DB
+	GetRelationName() string
 
 	AvailableLang() []string
 	GetCurrency() string

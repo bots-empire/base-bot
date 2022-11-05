@@ -15,6 +15,7 @@ type Service struct {
 
 	startSignaller    chan interface{}
 	usersPerIteration int
+	dbType            string
 	debugMode         bool
 }
 
@@ -37,4 +38,12 @@ func (s *Service) DebugModeOn() {
 
 func (s *Service) DebugModeOff() {
 	s.debugMode = false
+}
+
+func (s *Service) setMySQLdb() {
+	s.dbType = MySQL
+}
+
+func (s *Service) setPSQLdb() {
+	s.dbType = PSQL
 }

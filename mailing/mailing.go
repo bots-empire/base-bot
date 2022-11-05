@@ -50,12 +50,8 @@ func (s *Service) startSenderHandler() {
 }
 
 func (s *Service) getUsersWithMailing() ([]*MailingUser, error) {
-	rows, err := s.messages.Sender.GetDataBase().Query(`
-SELECT id, lang, advert_channel
-	FROM users
-WHERE status = ? OR status = ''
-ORDER BY id
-	LIMIT ?;`,
+	rows, err := s.messages.Sender.GetDataBase().Query(
+		renderSQL("get_users", s.messages.Sender.GetRelationName(), s.dbType),
 		statusNeedMailing,
 		s.usersPerIteration)
 	if err != nil {
@@ -92,22 +88,27 @@ func (s *Service) errorHandler(err error) {
 	s.messages.SendNotificationToDeveloper(fmt.Sprintf("%s  //  error in mailing: %s", s.messages.Sender.GetBotLang(), err), false)
 	time.Sleep(3 * time.Second)
 }
+
 func (s *Service) sendErrorToAdmin(err error) {
 	s.messages.SendNotificationToDeveloper(fmt.Sprintf("%s  //  error in mailing: %s", s.messages.Sender.GetBotLang(), err), false)
 }
 
 func (s *Service) stopHandler() {
 	<-s.startSignaller
-	s.messages.SendNotificationToDeveloper(fmt.Sprintf("%s  //  mailing handler started", s.messages.Sender.GetBotLang()), false)
+	if s.debugMode {
+		s.messages.SendNotificationToDeveloper(fmt.Sprintf("%s  //  mailing handler started", s.messages.Sender.GetBotLang()), false)
+	}
 }
 
 func (s *Service) StartMailing(channels []int) error {
 	s.fillMessageMap()
 
-	s.messages.SendNotificationToDeveloper(
-		fmt.Sprintf("%s // mailing started", s.messages.Sender.GetBotLang()),
-		false,
-	)
+	if s.debugMode {
+		s.messages.SendNotificationToDeveloper(
+			fmt.Sprintf("%s // mailing started", s.messages.Sender.GetBotLang()),
+			false,
+		)
+	}
 
 	for _, userChannel := range channels {
 		err := s.markMailingUsers(userChannel)
@@ -122,11 +123,8 @@ func (s *Service) StartMailing(channels []int) error {
 }
 
 func (s *Service) markMailingUsers(usersChan int) error {
-	_, err := s.messages.Sender.GetDataBase().Exec(`
-UPDATE users 
-	SET status = ? 
-WHERE status = ?
-	AND advert_channel = ?;`,
+	_, err := s.messages.Sender.GetDataBase().Exec(
+		renderSQL("mark_mailing_user", s.messages.Sender.GetRelationName(), s.dbType),
 		statusNeedMailing,
 		statusActive,
 		usersChan)
@@ -194,10 +192,8 @@ func (s *Service) sendMailToUser(wg *sync.WaitGroup, user *MailingUser) {
 }
 
 func (s *Service) markReadyMailingUser(userID int64) error {
-	_, err := s.messages.Sender.GetDataBase().Exec(`
-UPDATE users 
-	SET status = ? 
-WHERE id = ?;`,
+	_, err := s.messages.Sender.GetDataBase().Exec(
+		renderSQL("mark_active_user", s.messages.Sender.GetRelationName(), s.dbType),
 		statusActive,
 		userID)
 	if err != nil {
