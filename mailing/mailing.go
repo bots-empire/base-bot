@@ -15,6 +15,7 @@ import (
 const (
 	statusActive      = "active"
 	statusNeedMailing = "mailing"
+	statusInitMailing = "init_mailing"
 )
 
 type MailingUser struct {
@@ -94,14 +95,43 @@ func (s *Service) sendErrorToAdmin(err error) {
 }
 
 func (s *Service) stopHandler() {
+	userIDs, err := s.getUsersWithInitMailing()
+	if err != nil {
+		s.sendErrorToAdmin(err)
+	}
+
+	for _, user := range userIDs {
+		err = s.messages.NewParseMessage(user.ID, "mailing completed")
+		s.messages.SendNotificationToDeveloper(fmt.Sprintf("err in new parse message: %s", err), false)
+
+		err = s.markReadyMailingUser(user.ID)
+		s.sendErrorToAdmin(err)
+	}
+
 	<-s.startSignaller
 	if s.debugMode {
 		s.messages.SendNotificationToDeveloper(fmt.Sprintf("%s  //  mailing handler started", s.messages.Sender.GetBotLang()), false)
 	}
 }
 
-func (s *Service) StartMailing(channels []int) error {
+func (s *Service) getUsersWithInitMailing() ([]*MailingUser, error) {
+	rows, err := s.messages.Sender.GetDataBase().Query(
+		renderSQL("get_users", s.messages.Sender.GetRelationName(), s.dbType),
+		statusInitMailing,
+		s.usersPerIteration)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("failed execute query in get users with pagination, per inter = %d", s.usersPerIteration))
+	}
+
+	return s.readUsersFromRows(rows)
+}
+
+func (s *Service) StartMailing(channels []int, id int64) error {
 	s.fillMessageMap()
+	err := s.markInitMailingUsers(id)
+	if err != nil {
+		return err
+	}
 
 	if s.debugMode {
 		s.messages.SendNotificationToDeveloper(
@@ -111,7 +141,7 @@ func (s *Service) StartMailing(channels []int) error {
 	}
 
 	for _, userChannel := range channels {
-		err := s.markMailingUsers(userChannel)
+		err = s.markMailingUsers(userChannel)
 		if err != nil {
 			return err
 		}
@@ -130,6 +160,19 @@ func (s *Service) markMailingUsers(usersChan int) error {
 		usersChan)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("failed execute query in mark mailing users, users chan = %d", usersChan))
+	}
+
+	return nil
+}
+
+func (s *Service) markInitMailingUsers(id int64) error {
+	_, err := s.messages.Sender.GetDataBase().Exec(
+		renderSQL("mark_mailing_user", s.messages.Sender.GetRelationName(), s.dbType),
+		statusInitMailing,
+		statusActive,
+		id)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("failed execute query in mark init mailing users, users chan = %d", id))
 	}
 
 	return nil
