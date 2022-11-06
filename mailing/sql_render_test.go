@@ -36,3 +36,11 @@ func TestRenderSQL(t *testing.T) {
 		})
 	}
 }
+
+func TestRenderSQL2(t *testing.T) {
+	for key := range sqlQueries {
+		fmt.Println(renderSQL(key, "shazam.users", PSQL))
+		fmt.Println(renderSQL(key, "users", MySQL))
+		fmt.Println()
+	}
+}
