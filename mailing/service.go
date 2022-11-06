@@ -40,10 +40,10 @@ func (s *Service) DebugModeOff() {
 	s.debugMode = false
 }
 
-func (s *Service) setMySQLdb() {
+func (s *Service) SetMySQLdb() {
 	s.dbType = MySQL
 }
 
-func (s *Service) setPSQLdb() {
+func (s *Service) SetPSQLdb() {
 	s.dbType = PSQL
 }
