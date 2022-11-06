@@ -167,9 +167,8 @@ func (s *Service) markMailingUsers(usersChan int) error {
 
 func (s *Service) markInitMailingUsers(id int64) error {
 	_, err := s.messages.Sender.GetDataBase().Exec(
-		renderSQL("mark_mailing_user", s.messages.Sender.GetRelationName(), s.dbType),
+		renderSQL("mark_init_mailing_user", s.messages.Sender.GetRelationName(), s.dbType),
 		statusInitMailing,
-		statusActive,
 		id)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("failed execute query in mark init mailing users, users chan = %d", id))
