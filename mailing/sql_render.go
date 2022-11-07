@@ -22,6 +22,11 @@ WHERE status = {{variable}} OR status = ''
 ORDER BY id
 	LIMIT {{variable}};`,
 
+		"count_mailing_users": `
+SELECT id
+	FROM {{relation}}
+WHERE status = {{variable}};`,
+
 		"mark_mailing_user": `
 UPDATE {{relation}}
 	SET status = {{variable}}
