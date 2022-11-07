@@ -101,7 +101,10 @@ func (s *Service) stopHandler() {
 	}
 
 	for _, user := range userIDs {
-		err = s.messages.NewParseMessage(user.ID, "mailing completed")
+		err, count := s.countMailingUsers()
+		s.messages.SendNotificationToDeveloper(fmt.Sprintf("failed count mailing users: %s", err), false)
+
+		err = s.messages.NewParseMessage(user.ID, fmt.Sprintf("%s // mailing completed // Total : %d", s.messages.Sender.GetBotLang(), count))
 		s.messages.SendNotificationToDeveloper(fmt.Sprintf("err in new parse message: %s", err), false)
 
 		err = s.markReadyMailingUser(user.ID)
@@ -112,6 +115,23 @@ func (s *Service) stopHandler() {
 	if s.debugMode {
 		s.messages.SendNotificationToDeveloper(fmt.Sprintf("%s  //  mailing handler started", s.messages.Sender.GetBotLang()), false)
 	}
+}
+
+func (s *Service) countMailingUsers() (error, int) {
+	rows, err := s.messages.Sender.GetDataBase().Query(
+		renderSQL("get_users", s.messages.Sender.GetRelationName(), s.dbType),
+		statusNeedMailing,
+		s.usersPerIteration)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("failed execute query in get users with pagination, per inter = %d", s.usersPerIteration)), 0
+	}
+
+	users, err := s.readUsersFromRows(rows)
+	if err != nil {
+		return errors.Wrap(err, "failed read Users From Rows"), 0
+	}
+
+	return nil, len(users)
 }
 
 func (s *Service) getUsersWithInitMailing() ([]*MailingUser, error) {
