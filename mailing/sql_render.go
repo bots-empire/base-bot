@@ -24,7 +24,7 @@ ORDER BY id
 
 		"count_mailing_users": `
 SELECT COUNT(id) 
-FROM {{relation}};
+FROM {{relation}}
 WHERE status = {{variable}};`,
 
 		"mark_mailing_user": `
