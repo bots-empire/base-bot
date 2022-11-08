@@ -23,8 +23,8 @@ ORDER BY id
 	LIMIT {{variable}};`,
 
 		"count_mailing_users": `
-SELECT id, lang, advert_channel
-	FROM {{relation}}
+SELECT COUNT(id) 
+FROM {{relation}};
 WHERE status = {{variable}};`,
 
 		"mark_mailing_user": `

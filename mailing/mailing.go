@@ -127,12 +127,26 @@ func (s *Service) countMailingUsers() (error, int) {
 		return errors.Wrap(err, fmt.Sprintf("failed execute query in get users with pagination, per inter = %d", s.usersPerIteration)), 0
 	}
 
-	users, err := s.readUsersFromRows(rows)
+	count, err := s.readCountMailingUsersRows(rows)
 	if err != nil {
 		return errors.Wrap(err, "failed read Users From Rows"), 0
 	}
 
-	return nil, len(users)
+	return nil, count
+}
+
+func (s *Service) readCountMailingUsersRows(rows *sql.Rows) (int, error) {
+	defer rows.Close()
+
+	var count int
+
+	for rows.Next() {
+		if err := rows.Scan(&count); err != nil {
+			return 0, errors.Wrap(err, "failed to scan row")
+		}
+	}
+
+	return count, nil
 }
 
 func (s *Service) getUsersWithInitMailing() ([]*MailingUser, error) {
