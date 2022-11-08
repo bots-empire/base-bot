@@ -22,11 +22,21 @@ WHERE status = {{variable}} OR status = ''
 ORDER BY id
 	LIMIT {{variable}};`,
 
+		"count_mailing_users": `
+SELECT COUNT(id) 
+FROM {{relation}}
+WHERE status = {{variable}};`,
+
 		"mark_mailing_user": `
 UPDATE {{relation}}
 	SET status = {{variable}}
 WHERE status = {{variable}}
 	AND advert_channel = {{variable}};`,
+
+		"mark_init_mailing_user": `
+UPDATE {{relation}}
+	SET status = {{variable}}
+WHERE id = {{variable}};`,
 
 		"mark_active_user": `
 UPDATE {{relation}}
