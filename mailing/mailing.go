@@ -154,6 +154,7 @@ func (s *Service) getUsersWithInitMailing() ([]*MailingUser, error) {
 		renderSQL("get_users", s.messages.Sender.GetRelationName(), s.dbType),
 		statusInitMailing,
 		s.usersPerIteration)
+
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed execute query in get users with pagination, per inter = %d", s.usersPerIteration))
 	}
@@ -201,10 +202,11 @@ func (s *Service) markMailingUsers(usersChan int) error {
 }
 
 func (s *Service) markInitMailingUsers(id int64) error {
-	_, err := s.messages.Sender.GetDataBase().Exec(
+	t, err := s.messages.Sender.GetDataBase().Exec(
 		renderSQL("mark_init_mailing_user", s.messages.Sender.GetRelationName(), s.dbType),
 		statusInitMailing,
 		id)
+	fmt.Println("markInitMailingUsers", t)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("failed execute query in mark init mailing users, users chan = %d", id))
 	}
