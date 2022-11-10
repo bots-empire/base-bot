@@ -151,10 +151,8 @@ func (s *Service) readCountMailingUsersRows(rows *sql.Rows) (int, error) {
 
 func (s *Service) getUsersWithInitMailing() ([]*MailingUser, error) {
 	rows, err := s.messages.Sender.GetDataBase().Query(
-		renderSQL("get_users", s.messages.Sender.GetRelationName(), s.dbType),
-		statusInitMailing,
-		s.usersPerIteration)
-
+		renderSQL("get_init_mailing_users", s.messages.Sender.GetRelationName(), s.dbType),
+		statusInitMailing)
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed execute query in get users with pagination, per inter = %d", s.usersPerIteration))
 	}

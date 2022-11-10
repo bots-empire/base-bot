@@ -38,6 +38,11 @@ UPDATE {{relation}}
 	SET status = {{variable}}
 WHERE id = {{variable}};`,
 
+		"get_init_mailing_users": `
+SELECT id, lang, advert_channel
+	FROM {{relation}}
+WHERE status = {{variable}};`,
+
 		"mark_active_user": `
 UPDATE {{relation}}
 	SET status = {{variable}}
