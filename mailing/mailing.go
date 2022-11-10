@@ -107,10 +107,14 @@ func (s *Service) stopHandler() {
 
 	for _, user := range userIDs {
 		err = s.messages.NewParseMessage(user.ID, fmt.Sprintf("%s // mailing completed // Total : %d", s.messages.Sender.GetBotLang(), count))
-		s.messages.SendNotificationToDeveloper(fmt.Sprintf("err in new parse message: %s", err), false)
+		if err != nil {
+			s.messages.SendNotificationToDeveloper(fmt.Sprintf("err in new parse message: %s", err), false)
+		}
 
 		err = s.markReadyMailingUser(user.ID)
-		s.sendErrorToAdmin(err)
+		if err != nil {
+			s.sendErrorToAdmin(err)
+		}
 	}
 
 	<-s.startSignaller

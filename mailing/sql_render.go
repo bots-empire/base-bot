@@ -81,5 +81,6 @@ func replaceVariables(baseSQL, dbType string) string {
 		variableCount++
 	}
 
-	return strings.Join(splitSQL, " ") + ";"
+	result := strings.Join(splitSQL, " ") + ";"
+	return result
 }
