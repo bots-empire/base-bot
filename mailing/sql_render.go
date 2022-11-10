@@ -39,7 +39,7 @@ UPDATE {{relation}}
 WHERE id = {{variable}};`,
 
 		"get_init_mailing_users": `
-SELECT id, lang, advert_channel
+SELECT id
 	FROM {{relation}}
 WHERE status = {{variable}};`,
 
