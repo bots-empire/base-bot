@@ -107,10 +107,14 @@ func (s *Service) stopHandler() {
 
 	for _, user := range userIDs {
 		err = s.messages.NewParseMessage(user.ID, fmt.Sprintf("%s // mailing completed // Total : %d", s.messages.Sender.GetBotLang(), count))
-		s.messages.SendNotificationToDeveloper(fmt.Sprintf("err in new parse message: %s", err), false)
+		if err != nil {
+			s.messages.SendNotificationToDeveloper(fmt.Sprintf("err in new parse message: %s", err), false)
+		}
 
 		err = s.markReadyMailingUser(user.ID)
-		s.sendErrorToAdmin(err)
+		if err != nil {
+			s.sendErrorToAdmin(err)
+		}
 	}
 
 	<-s.startSignaller
@@ -151,14 +155,31 @@ func (s *Service) readCountMailingUsersRows(rows *sql.Rows) (int, error) {
 
 func (s *Service) getUsersWithInitMailing() ([]*MailingUser, error) {
 	rows, err := s.messages.Sender.GetDataBase().Query(
-		renderSQL("get_users", s.messages.Sender.GetRelationName(), s.dbType),
-		statusInitMailing,
-		s.usersPerIteration)
+		renderSQL("get_init_mailing_users", s.messages.Sender.GetRelationName(), s.dbType),
+		statusInitMailing)
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed execute query in get users with pagination, per inter = %d", s.usersPerIteration))
 	}
 
-	return s.readUsersFromRows(rows)
+	return s.readIDFromRows(rows)
+}
+
+func (s *Service) readIDFromRows(rows *sql.Rows) ([]*MailingUser, error) {
+	var users []*MailingUser
+
+	for rows.Next() {
+		user := &MailingUser{}
+
+		if err := rows.Scan(
+			&user.ID,
+		); err != nil {
+			return nil, errors.Wrap(err, "failed scan row")
+		}
+
+		users = append(users, user)
+	}
+
+	return users, nil
 }
 
 func (s *Service) StartMailing(channels []int, id int64) error {
@@ -201,10 +222,11 @@ func (s *Service) markMailingUsers(usersChan int) error {
 }
 
 func (s *Service) markInitMailingUsers(id int64) error {
-	_, err := s.messages.Sender.GetDataBase().Exec(
+	t, err := s.messages.Sender.GetDataBase().Exec(
 		renderSQL("mark_init_mailing_user", s.messages.Sender.GetRelationName(), s.dbType),
 		statusInitMailing,
 		id)
+	fmt.Println("markInitMailingUsers", t)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("failed execute query in mark init mailing users, users chan = %d", id))
 	}

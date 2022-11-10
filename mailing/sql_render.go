@@ -38,6 +38,11 @@ UPDATE {{relation}}
 	SET status = {{variable}}
 WHERE id = {{variable}};`,
 
+		"get_init_mailing_users": `
+SELECT id
+	FROM {{relation}}
+WHERE status = {{variable}};`,
+
 		"mark_active_user": `
 UPDATE {{relation}}
 	SET status = {{variable}}
@@ -76,5 +81,6 @@ func replaceVariables(baseSQL, dbType string) string {
 		variableCount++
 	}
 
-	return strings.Join(splitSQL, " ") + ";"
+	result := strings.Join(splitSQL, " ") + ";"
+	return result
 }
