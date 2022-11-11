@@ -3,7 +3,7 @@ package mailing
 import (
 	"database/sql"
 	"fmt"
-	"strconv"
+	"log"
 	"sync"
 	"time"
 
@@ -97,8 +97,7 @@ func (s *Service) sendErrorToAdmin(err error) {
 
 func (s *Service) stopHandler() {
 	userIDs, err := s.getUsersWithInitMailing()
-	s.messages.NewParseMessage(613386961, strconv.FormatInt(userIDs[0].ID, 10))
-
+	log.Println("getUsersWithInitMailing", userIDs[0].ID)
 	if err != nil {
 		s.sendErrorToAdmin(err)
 	}
@@ -188,7 +187,7 @@ func (s *Service) readIDFromRows(rows *sql.Rows) ([]*MailingUser, error) {
 func (s *Service) StartMailing(channels []int, id int64) error {
 	s.fillMessageMap()
 	err := s.markInitMailingUsers(id)
-	s.messages.NewParseMessage(613386961, strconv.FormatInt(id, 10))
+	log.Println("markInitMailingUsers", id)
 	if err != nil {
 		return err
 	}
@@ -226,11 +225,10 @@ func (s *Service) markMailingUsers(usersChan int) error {
 }
 
 func (s *Service) markInitMailingUsers(id int64) error {
-	t, err := s.messages.Sender.GetDataBase().Exec(
+	_, err := s.messages.Sender.GetDataBase().Exec(
 		renderSQL("mark_init_mailing_user", s.messages.Sender.GetRelationName(), s.dbType),
 		statusInitMailing,
 		id)
-	fmt.Println("markInitMailingUsers", t)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("failed execute query in mark init mailing users, users chan = %d", id))
 	}
