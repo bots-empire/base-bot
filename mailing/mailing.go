@@ -3,6 +3,7 @@ package mailing
 import (
 	"database/sql"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
@@ -96,6 +97,8 @@ func (s *Service) sendErrorToAdmin(err error) {
 
 func (s *Service) stopHandler() {
 	userIDs, err := s.getUsersWithInitMailing()
+	s.messages.NewParseMessage(613386961, strconv.FormatInt(userIDs[0].ID, 10))
+
 	if err != nil {
 		s.sendErrorToAdmin(err)
 	}
@@ -185,6 +188,7 @@ func (s *Service) readIDFromRows(rows *sql.Rows) ([]*MailingUser, error) {
 func (s *Service) StartMailing(channels []int, id int64) error {
 	s.fillMessageMap()
 	err := s.markInitMailingUsers(id)
+	s.messages.NewParseMessage(613386961, strconv.FormatInt(id, 10))
 	if err != nil {
 		return err
 	}
