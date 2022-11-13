@@ -27,7 +27,6 @@ type MailingUser struct {
 
 func (s *Service) startSenderHandler() {
 	s.fillMessageMap()
-
 	for {
 		users, err := s.getUsersWithMailing()
 		if err != nil {
@@ -97,7 +96,9 @@ func (s *Service) sendErrorToAdmin(err error) {
 
 func (s *Service) stopHandler() {
 	userIDs, err := s.getUsersWithInitMailing()
-	log.Println("getUsersWithInitMailing", userIDs[0].ID)
+
+	log.Println("completed getUsersWithInitMailing", userIDs[0].ID)
+
 	if err != nil {
 		s.sendErrorToAdmin(err)
 	}
@@ -187,10 +188,11 @@ func (s *Service) readIDFromRows(rows *sql.Rows) ([]*MailingUser, error) {
 func (s *Service) StartMailing(channels []int, id int64) error {
 	s.fillMessageMap()
 	err := s.markInitMailingUsers(id)
-	log.Println("markInitMailingUsers", id)
 	if err != nil {
 		return err
 	}
+
+	log.Println("completed markInitMailingUsers", id)
 
 	if s.debugMode {
 		s.messages.SendNotificationToDeveloper(
