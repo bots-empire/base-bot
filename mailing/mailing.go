@@ -105,7 +105,9 @@ func (s *Service) sendErrorToAdmin(err error) {
 func (s *Service) stopHandler() {
 	userIDs, err := s.getUsersWithInitMailing()
 
-	log.Println("completed get Users With Init Mailing", userIDs[0].ID)
+	for _, userID := range userIDs {
+		log.Println("completed get Users With Init Mailing", userID.ID)
+	}
 
 	if err != nil {
 		s.sendErrorToAdmin(err)
