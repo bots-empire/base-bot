@@ -3,6 +3,7 @@ package mailing
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -26,15 +27,16 @@ type MailingUser struct {
 
 func (s *Service) startSenderHandler() {
 	s.fillMessageMap()
-
 	for {
 		users, err := s.getUsersWithMailing()
+		log.Println("completed getUsersWithMailing", len(users))
 		if err != nil {
 			s.errorHandler(err)
 			continue
 		}
 
 		if len(users) == 0 {
+			log.Println("len(users) == 0")
 			s.stopHandler()
 			continue
 		}
@@ -59,6 +61,8 @@ func (s *Service) getUsersWithMailing() ([]*MailingUser, error) {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed execute query in get users with pagination, per inter = %d", s.usersPerIteration))
 	}
 
+	log.Println("get Users With Init Mailing")
+
 	return s.readUsersFromRows(rows)
 }
 
@@ -82,6 +86,10 @@ func (s *Service) readUsersFromRows(rows *sql.Rows) ([]*MailingUser, error) {
 		users = append(users, user)
 	}
 
+	for _, user := range users {
+		log.Println("get Users With Init Mailing", user.ID)
+	}
+
 	return users, nil
 }
 
@@ -96,6 +104,9 @@ func (s *Service) sendErrorToAdmin(err error) {
 
 func (s *Service) stopHandler() {
 	userIDs, err := s.getUsersWithInitMailing()
+
+	log.Println("completed get Users With Init Mailing", userIDs[0].ID)
+
 	if err != nil {
 		s.sendErrorToAdmin(err)
 	}
@@ -115,8 +126,10 @@ func (s *Service) stopHandler() {
 		if err != nil {
 			s.sendErrorToAdmin(err)
 		}
+		log.Println("completed markReadyMailingUser")
 	}
 
+	log.Println("push startSignaller")
 	<-s.startSignaller
 	if s.debugMode {
 		s.messages.SendNotificationToDeveloper(fmt.Sprintf("%s  //  mailing handler started", s.messages.Sender.GetBotLang()), false)
@@ -161,6 +174,8 @@ func (s *Service) getUsersWithInitMailing() ([]*MailingUser, error) {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed execute query in get users with pagination, per inter = %d", s.usersPerIteration))
 	}
 
+	log.Println("get Users With Init Mailing")
+
 	return s.readIDFromRows(rows)
 }
 
@@ -179,15 +194,22 @@ func (s *Service) readIDFromRows(rows *sql.Rows) ([]*MailingUser, error) {
 		users = append(users, user)
 	}
 
+	log.Println("read ID From Rows", len(users))
+
 	return users, nil
 }
 
 func (s *Service) StartMailing(channels []int, id int64) error {
+
+	log.Println("Start Mailing")
+
 	s.fillMessageMap()
 	err := s.markInitMailingUsers(id)
 	if err != nil {
 		return err
 	}
+
+	log.Println("completed markInitMailingUsers", id)
 
 	if s.debugMode {
 		s.messages.SendNotificationToDeveloper(
@@ -203,6 +225,7 @@ func (s *Service) StartMailing(channels []int, id int64) error {
 		}
 	}
 
+	log.Println("get startSignaller")
 	s.startSignaller <- true
 
 	return nil
@@ -218,24 +241,29 @@ func (s *Service) markMailingUsers(usersChan int) error {
 		return errors.Wrap(err, fmt.Sprintf("failed execute query in mark mailing users, users chan = %d", usersChan))
 	}
 
+	log.Println("mark Mailing User")
+
 	return nil
 }
 
 func (s *Service) markInitMailingUsers(id int64) error {
-	t, err := s.messages.Sender.GetDataBase().Exec(
+	_, err := s.messages.Sender.GetDataBase().Exec(
 		renderSQL("mark_init_mailing_user", s.messages.Sender.GetRelationName(), s.dbType),
 		statusInitMailing,
 		id)
-	fmt.Println("markInitMailingUsers", t)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("failed execute query in mark init mailing users, users chan = %d", id))
 	}
+
+	log.Println("mark Init Mailing User")
 
 	return nil
 }
 
 func (s *Service) sendMailToUser(wg *sync.WaitGroup, user *MailingUser) {
 	defer wg.Done()
+
+	log.Println("send Mail To User")
 
 	markUp := msgs.NewIlMarkUp(
 		msgs.NewIlRow(msgs.NewIlURLButton("advertisement_button_text",
@@ -298,6 +326,8 @@ func (s *Service) markReadyMailingUser(userID int64) error {
 	if err != nil {
 		return errors.Wrap(err, "failed execute query in mark ready user")
 	}
+
+	log.Println("mark Ready Mailing User")
 
 	return nil
 }
