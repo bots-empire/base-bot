@@ -29,14 +29,14 @@ func (s *Service) startSenderHandler() {
 	s.fillMessageMap()
 	for {
 		users, err := s.getUsersWithMailing()
-		log.Println("completed getUsersWithMailing", users)
+		log.Println("completed getUsersWithMailing", len(users))
 		if err != nil {
 			s.errorHandler(err)
 			continue
 		}
 
 		if len(users) == 0 {
-			log.Println("len(users) == 0", users)
+			log.Println("len(users) == 0")
 			s.stopHandler()
 			continue
 		}
@@ -61,7 +61,7 @@ func (s *Service) getUsersWithMailing() ([]*MailingUser, error) {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed execute query in get users with pagination, per inter = %d", s.usersPerIteration))
 	}
 
-	log.Println("get Users With Init Mailing", rows)
+	log.Println("get Users With Init Mailing")
 
 	return s.readUsersFromRows(rows)
 }
@@ -174,7 +174,7 @@ func (s *Service) getUsersWithInitMailing() ([]*MailingUser, error) {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed execute query in get users with pagination, per inter = %d", s.usersPerIteration))
 	}
 
-	log.Println("get Users With Init Mailing", rows)
+	log.Println("get Users With Init Mailing")
 
 	return s.readIDFromRows(rows)
 }
@@ -194,7 +194,7 @@ func (s *Service) readIDFromRows(rows *sql.Rows) ([]*MailingUser, error) {
 		users = append(users, user)
 	}
 
-	log.Println("read ID From Rows", users)
+	log.Println("read ID From Rows", len(users))
 
 	return users, nil
 }
