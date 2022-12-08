@@ -1,10 +1,11 @@
 package msgs
 
 import (
-	"github.com/bots-empire/base-bot/models"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/bots-empire/base-bot/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
@@ -214,6 +215,8 @@ func (s *Service) errorHandler(err error, userID int64) bool {
 
 	if err.Error() == "json: cannot unmarshal bool into Go value of type tgbotapi.Message" ||
 		err.Error() == "Bad Request: query is too old and response timeout expired or query ID is invalid" ||
+		err.Error() == "Bad Request: message to delete not found" ||
+		err.Error() == "Bad Request: MESSAGE_ID_INVALID" ||
 		err.Error() == "Bad Request: message is not modified: specified new message content and reply markup are exactly the same as a current content and reply markup of the message" {
 		return true
 	}
