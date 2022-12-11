@@ -1,6 +1,7 @@
 package msgs
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -244,6 +245,7 @@ func getSleepTimeFromErr(err string) int {
 }
 
 func (s *Service) SendNotificationToDeveloper(text string, needPin bool) {
+	text = fmt.Sprintf("%s  //  %s", s.Sender.GetBotLang(), text)
 	for _, developerID := range s.Developers {
 		msgID, _ := s.NewIDParseMessage(developerID, text)
 
