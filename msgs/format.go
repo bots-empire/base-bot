@@ -27,6 +27,17 @@ func (s *Service) NewParseMessage(chatID int64, text string) error {
 	return s.SendMsgToUser(msg, chatID)
 }
 
+func (s *Service) NewNoParseMessage(chatID int64, text string) error {
+	msg := tgbotapi.MessageConfig{
+		BaseChat: tgbotapi.BaseChat{
+			ChatID: chatID,
+		},
+		Text: s.insertCurrency(text),
+	}
+
+	return s.SendMsgToUser(msg, chatID)
+}
+
 func (s *Service) NewIDParseMessage(chatID int64, text string) (int, error) {
 	msg := tgbotapi.MessageConfig{
 		BaseChat: tgbotapi.BaseChat{
@@ -34,6 +45,21 @@ func (s *Service) NewIDParseMessage(chatID int64, text string) (int, error) {
 		},
 		Text:      s.insertCurrency(text),
 		ParseMode: "HTML",
+	}
+
+	message, err := s.sendMsgToUser(msg, chatID)
+	if err != nil {
+		return 0, nil
+	}
+	return message.MessageID, nil
+}
+
+func (s *Service) NewIDNoParseMessage(chatID int64, text string) (int, error) {
+	msg := tgbotapi.MessageConfig{
+		BaseChat: tgbotapi.BaseChat{
+			ChatID: chatID,
+		},
+		Text: s.insertCurrency(text),
 	}
 
 	message, err := s.sendMsgToUser(msg, chatID)
@@ -51,6 +77,18 @@ func (s *Service) NewParseMarkUpMessage(chatID int64, markUp interface{}, text s
 		},
 		Text:      s.insertCurrency(text),
 		ParseMode: "HTML",
+	}
+
+	return s.SendMsgToUser(msg, chatID)
+}
+
+func (s *Service) NewNoParseMarkUpMessage(chatID int64, markUp interface{}, text string) error {
+	msg := tgbotapi.MessageConfig{
+		BaseChat: tgbotapi.BaseChat{
+			ChatID:      chatID,
+			ReplyMarkup: markUp,
+		},
+		Text: s.insertCurrency(text),
 	}
 
 	return s.SendMsgToUser(msg, chatID)
