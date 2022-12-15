@@ -285,7 +285,11 @@ func getSleepTimeFromErr(err string) int {
 func (s *Service) SendNotificationToDeveloper(text string, needPin bool) {
 	text = fmt.Sprintf("%s  //  %s", s.Sender.GetBotLang(), text)
 	for _, developerID := range s.Developers {
-		msgID, _ := s.NewIDParseMessage(developerID, text)
+		msgID, err := s.NewIDParseMessage(developerID, text)
+		if err != nil {
+			models.SendToDevError.WithLabelValues(strconv.FormatInt(developerID, 16), err.Error())
+			continue
+		}
 
 		if needPin {
 			s.PinMsgToDeveloper(developerID, msgID)

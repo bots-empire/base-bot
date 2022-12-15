@@ -21,4 +21,12 @@ var (
 		},
 		[]string{"bot_lang"},
 	)
+
+	SendToDevError = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "send_to_developers_error",
+			Help: "Error then send msg to developers",
+		},
+		[]string{"developer_id", "error"},
+	)
 )
