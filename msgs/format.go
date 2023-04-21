@@ -226,12 +226,8 @@ func (s *Service) sendMsgToUser(msg tgbotapi.Chattable, userID int64) (tgbotapi.
 			return sendMsg, nil
 		}
 
-		s.logger.Error("Failed send msg to user",
-			zap.Error(err),
-			zap.Int64("user_id", userID),
-		)
 		if s.errorHandler(err, userID) {
-			s.logger.Info("Error handled success, return -1",
+			s.logger.Warn("Error handled success, return -1",
 				zap.Error(err),
 				zap.Int64("user_id", userID),
 			)
@@ -240,6 +236,11 @@ func (s *Service) sendMsgToUser(msg tgbotapi.Chattable, userID int64) (tgbotapi.
 				MessageID: -1,
 			}, nil
 		}
+
+		s.logger.Error("Failed send msg to user",
+			zap.Error(err),
+			zap.Int64("user_id", userID),
+		)
 
 		returnErr = err
 
