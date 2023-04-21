@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"go.uber.org/zap"
+
 	"github.com/bots-empire/base-bot/models"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -224,7 +226,16 @@ func (s *Service) sendMsgToUser(msg tgbotapi.Chattable, userID int64) (tgbotapi.
 			return sendMsg, nil
 		}
 
+		s.logger.Error("Failed send msg to user",
+			zap.Error(err),
+			zap.Int64("user_id", userID),
+		)
 		if s.errorHandler(err, userID) {
+			s.logger.Info("Error handled success, return -1",
+				zap.Error(err),
+				zap.Int64("user_id", userID),
+			)
+
 			return tgbotapi.Message{
 				MessageID: -1,
 			}, nil
