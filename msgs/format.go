@@ -268,6 +268,7 @@ func (s *Service) errorHandler(err error, userID int64) bool {
 		err.Error() == "Bad Request: query is too old and response timeout expired or query ID is invalid" ||
 		err.Error() == "Bad Request: message to delete not found" ||
 		err.Error() == "Bad Request: message to edit not found" ||
+		err.Error() == "Bad Request: message text is empty" ||
 		err.Error() == "Bad Request: MESSAGE_ID_INVALID" ||
 		err.Error() == "Bad Request: message is not modified: specified new message content and reply markup are exactly the same as a current content and reply markup of the message" {
 		return true
